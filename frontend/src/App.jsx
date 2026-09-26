@@ -1,28 +1,18 @@
 import { useEffect, useState } from 'react'
+import { api } from './api.js'
+import PrefixPage from './PrefixPage.jsx'
 
 export default function App() {
   const [username, setUsername] = useState('printer')
   const [password, setPassword] = useState('print123456')
   const [token, setToken] = useState(localStorage.getItem('print_token') || '')
   const [role, setRole] = useState(localStorage.getItem('print_role') || '')
+  const [view, setView] = useState('jobs')
   const [rows, setRows] = useState([])
-  const [sheet, setSheet] = useState('插页-02')
+  const [sheet, setSheet] = useState('封面-02')
   const [cyan, setCyan] = useState('0.08')
   const [magenta, setMagenta] = useState('0.02')
   const [error, setError] = useState('')
-
-  async function api(path, options = {}) {
-    const res = await fetch(path, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.detail || '请求失败')
-    return data
-  }
 
   async function load() {
     setRows(await api('/api/jobs'))
@@ -66,6 +56,7 @@ export default function App() {
     localStorage.clear()
     setToken('')
     setRole('')
+    setView('jobs')
   }
 
   if (!token) {
@@ -76,40 +67,64 @@ export default function App() {
         <input value={username} onChange={(e) => setUsername(e.target.value)} />
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         <button onClick={enter}>登录</button>
-        <p>printer / print123456 可送复核；checker / check123456 只看</p>
+        <p>printer / print123456 可送复核、维护前缀；checker / check123456 只看</p>
       </main>
     )
   }
 
   return (
     <main>
-      <h1>印刷套准复核台</h1>
-      <button onClick={leave}>退出</button>
-      {role === 'writer' && (
-        <p>
-          <input value={sheet} onChange={(e) => setSheet(e.target.value)} />
-          <input value={cyan} onChange={(e) => setCyan(e.target.value)} />
-          <input value={magenta} onChange={(e) => setMagenta(e.target.value)} />
-          <button onClick={send}>送复核</button>
-        </p>
+      <nav className="topbar">
+        <strong>印刷套准复核台</strong>
+        <button
+          className={view === 'jobs' ? 'active' : ''}
+          onClick={() => setView('jobs')}
+        >
+          复核台
+        </button>
+        <button
+          className={view === 'prefixes' ? 'active' : ''}
+          onClick={() => setView('prefixes')}
+        >
+          前缀白名单
+        </button>
+        <span className="spacer" />
+        <span>{role === 'writer' ? '印刷员' : '只读账号'}</span>
+        <button onClick={leave}>退出</button>
+      </nav>
+
+      {view === 'prefixes' ? (
+        <PrefixPage role={role} />
+      ) : (
+        <section>
+          <h2>复核台</h2>
+          {role === 'writer' && (
+            <p>
+              <input value={sheet} onChange={(e) => setSheet(e.target.value)} />
+              <input value={cyan} onChange={(e) => setCyan(e.target.value)} />
+              <input value={magenta} onChange={(e) => setMagenta(e.target.value)} />
+              <button onClick={send}>送复核</button>
+            </p>
+          )}
+          {error && <p className="error">{error}</p>}
+          <table>
+            <thead>
+              <tr><th>印张</th><th>青</th><th>品</th><th>状态</th><th>结论</th></tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.sheet}</td>
+                  <td>{row.cyan_mm}</td>
+                  <td>{row.magenta_mm}</td>
+                  <td>{row.status}</td>
+                  <td>{row.verdict || '等待'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
-      {error && <p>{error}</p>}
-      <table>
-        <thead>
-          <tr><th>印张</th><th>青</th><th>品</th><th>状态</th><th>结论</th></tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td>{row.sheet}</td>
-              <td>{row.cyan_mm}</td>
-              <td>{row.magenta_mm}</td>
-              <td>{row.status}</td>
-              <td>{row.verdict || '等待'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </main>
   )
 }

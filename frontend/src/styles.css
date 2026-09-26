@@ -1,0 +1,7 @@
+body { font-family: system-ui, sans-serif; margin: 16px; }
+.topbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.topbar .spacer { flex: 1; }
+.topbar button.active { font-weight: bold; }
+table { border-collapse: collapse; margin: 8px 0 24px; }
+th, td { border: 1px solid #999; padding: 4px 10px; }
+.error { color: #b00020; }
